@@ -37,17 +37,20 @@
 ;;             "~/projects/*"
 ;;             "~/work/*/*"))
 ;;
-;; Once patterns are specified `M-x find-project' will present all the
-;; projects matching the specified patterns. After project is selected
-;; the default action will be executed in the project's root.
+;; Now `M-x find-project' will present all the projects matching the
+;; specified patterns. After project is selected the default action
+;; will be executed in the project's root.
 ;;
 ;; Patterns can also be property lists with such keys `:pattern',
 ;; `:function', `:exclude' and `:action'. For example:
 ;;
 ;;     (setq find-project-patterns
-;;           '("~/.emacs.d"
-;;             (:pattern "~/.emacs.d/site-lisp/*" :action find-file)
+;;           '((:pattern "~/.emacs.d/site-lisp/*" :action find-file)
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
+;;
+;; You can mix both ways of specifying patterns: wildcards and plists.
+;; `:exclude' can also be a function accepting directory as argument
+;; and returning non-nil if the directory must be excluded.
 ;;
 ;; Completion can be customized by specifying one of the completing
 ;; function (`completing-read' by default):
@@ -65,6 +68,13 @@
 ;;
 ;;     ;; requires `find-file-in-project' package
 ;;     (setq find-projects-default-action 'find-file-in-project)
+;;
+;; Global project filter can be provided via `find-project-exclude':
+;;
+;;     (setq find-project-exclude "*/.*")
+;;
+;; As `:exclude' `find-project-exclude' can also be a function
+;; accepting directory as argument.
 
 ;;; Code:
 
@@ -76,7 +86,7 @@
 
 (defvar find-project-default-action 'find-project-dired)
 
-(defvar find-project-actions nil)
+(defvar find-project-exclude nil)
 
 (defun find-project-dired ()
   (dired default-directory))
@@ -94,9 +104,10 @@
              (error ":exclude must be a wildcard string or a function")))))
     (cl-remove-if match-p dirs)))
 
-(defun find-project--matched-dirs (pattern)
+(defun find-project--matched-dirs-unfiltered (pattern)
   "Return alist of directories matching the PATTERN.
-PATTERN can be either a wildcard string or a plist."
+PATTERN can be either a wildcard string or a plist.
+`find-project-exclude' is not considered."
   (cond ((stringp pattern)
          (find-project--expand pattern))
         ((listp pattern)
@@ -113,6 +124,15 @@ PATTERN can be either a wildcard string or a plist."
                dirs))))
         (t
          (error "Pattern must be a wildcard string or a property list"))))
+
+(defun find-project--matched-dirs (pattern)
+  "Return alist of directories matching the PATTERN.
+PATTERN can be either a wildcard string or a plist.
+Filter against `find-project-exclude' value."
+  (let ((matched-dirs (find-project--matched-dirs-unfiltered pattern)))
+    (if find-project-exclude
+        (find-project--exclude matched-dirs find-project-exclude)
+      matched-dirs)))
 
 (defun find-project--matched-projects (pattern)
   "Return alist of (DIR . ACTION) matching the PATTERN."
