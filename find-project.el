@@ -61,6 +61,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defvar find-project-patterns nil)
 
 (defvar find-project-completing-read-function 'completing-read)
@@ -76,7 +78,7 @@
   (cl-remove-if-not 'file-directory-p (file-expand-wildcards pattern)))
 
 (defun find-project-assoc-action (project)
-  (or (loop for (wildcard . action) in find-project-actions do
+  (or (cl-loop for (wildcard . action) in find-project-actions do
             (let ((regexp (wildcard-to-regexp wildcard)))
               (when (string-match-p regexp project)
                 (return action))))
