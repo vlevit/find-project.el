@@ -42,10 +42,11 @@
 ;; the default action will be executed in the project's root.
 ;;
 ;; Patterns can also be property lists with such keys `:pattern',
-;; `:function' and `:exclude'. For example:
+;; `:function', `:exclude' and `:action'. For example:
 ;;
 ;;     (setq find-project-patterns
 ;;           '("~/.emacs.d"
+;;             (:pattern "~/.emacs.d/site-lisp/*" :action find-file)
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
 ;;
 ;; Completion can be customized by specifying one of the completing
@@ -80,31 +81,31 @@
 (defun find-project-dired ()
   (dired default-directory))
 
-(defun find-project--matched-dirs (wildcard)
+(defun find-project--expand (wildcard)
   (cl-remove-if-not 'file-directory-p (file-expand-wildcards wildcard)))
 
 (defun find-project--exclude (dirs pattern)
   (let ((match-p
          (if (stringp pattern)
              (lambda (dir)
-               (message pattern)
-               (message dir)
                (string-match-p (wildcard-to-regexp pattern) dir))
            (if (functionp pattern)
                pattern
              (error ":exclude must be a wildcard string or a function")))))
     (cl-remove-if match-p dirs)))
 
-(defun find-project-matched-dirs (pattern)
+(defun find-project--matched-dirs (pattern)
+  "Return alist of directories matching the PATTERN.
+PATTERN can be either a wildcard string or a plist."
   (cond ((stringp pattern)
-         (find-project--matched-dirs pattern))
+         (find-project--expand pattern))
         ((listp pattern)
          (let ((pattern (plist-get pattern :pattern))
                (function (plist-get pattern :function))
                (exclude (plist-get pattern :exclude)))
            (let ((dirs
                   (if pattern
-                      (find-project--matched-dirs pattern)
+                      (find-project--expand pattern)
                     (if function
                         (funcall function)
                       (error ":pattern or :function must be specified")))))
@@ -113,16 +114,26 @@
         (t
          (error "Pattern must be a wildcard string or a property list"))))
 
+(defun find-project--matched-projects (pattern)
+  "Return alist of (DIR . ACTION) matching the PATTERN."
+  (let ((action (or (and (listp pattern) (plist-get pattern :action))
+                    find-project-default-action)))
+    (mapcar (lambda (dir) (cons dir action))
+            (find-project--matched-dirs pattern))))
+
 (defun find-project ()
-  "Select a project from `find-project-patterns'"
+  "Select a project from `find-project-patterns' and run action
+on it."
   (interactive)
   (let* ((projects
-          (cl-reduce 'append (mapcar 'find-project-matched-dirs find-project-patterns)))
-         (selected-project
-          (funcall find-project-completing-read-function "Projects: " projects))
-         (action (find-project-assoc-action selected-project)))
+          (cl-reduce 'append (mapcar 'find-project--matched-projects find-project-patterns)))
+         (directories
+          (mapcar 'car projects))
+         (selected-directory
+          (funcall find-project-completing-read-function "Projects: " directories))
+         (action (cdr (assoc selected-directory projects))))
     (with-temp-buffer
-      (cd selected-project)
+      (cd selected-directory)
       (if (commandp action)
           (call-interactively action)
         (funcall action)))))
