@@ -1,4 +1,4 @@
-;;; find-project.el --- ask for project and then switch to it
+;;; find-project.el --- find project
 
 ;; Copyright (C) 2016 Vyacheslav Levit
 
