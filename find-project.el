@@ -28,8 +28,8 @@
 
 ;;; Commentary:
 
-;; To make the package useful it's needed to specify wildcard path
-;; patterns to your project places. For example:
+;; To make the package useful it's needed to specify patterns to your
+;; project paths. For example:
 ;;
 ;;     (setq find-project-patterns
 ;;           '("~/.emacs.d"
@@ -48,7 +48,7 @@
 ;;           '((:pattern "~/.emacs.d/site-lisp/*" :action find-file)
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
 ;;
-;; You can mix both ways of specifying patterns: wildcards and plists.
+;; In patterns you can mix both wildcards and plists.
 ;; `:exclude' can also be a function accepting directory as argument
 ;; and returning non-nil if the directory must be excluded.
 ;;
