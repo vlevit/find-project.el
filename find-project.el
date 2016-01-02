@@ -49,8 +49,9 @@
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
 ;;
 ;; In patterns you can mix both wildcards and plists.
-;; `:exclude' can also be a function accepting directory as argument
-;; and returning non-nil if the directory must be excluded.
+;;
+;; `:exclude' can also be a list of wildcards or a function accepting
+;; directory as argument.
 ;;
 ;; Completion can be customized by specifying one of the completing
 ;; function (`completing-read' by default):
@@ -73,8 +74,7 @@
 ;;
 ;;     (setq find-project-exclude "*/.*")
 ;;
-;; As `:exclude' `find-project-exclude' can also be a function
-;; accepting directory as argument.
+;; `find-project-exclude' can accept the same types as `:exclude'.
 
 ;;; Code:
 
@@ -96,12 +96,18 @@
 
 (defun find-project--exclude (dirs pattern)
   (let ((match-p
-         (if (stringp pattern)
-             (lambda (dir)
-               (string-match-p (wildcard-to-regexp pattern) dir))
-           (if (functionp pattern)
-               pattern
-             (error ":exclude must be a wildcard string or a function")))))
+         (cond ((stringp pattern)
+                (lambda (dir)
+                  (string-match-p (wildcard-to-regexp pattern) dir)))
+               ((listp pattern)
+                (lambda (dir)
+                  (cl-loop for pat in pattern do
+                           (when (string-match-p (wildcard-to-regexp pat) dir)
+                             (return t)))))
+               ((functionp pattern)
+                pattern)
+               (t
+                (error ":exclude must be a wildcard, list of wildcards or a function")))))
     (cl-remove-if match-p dirs)))
 
 (defun find-project--matched-dirs-unfiltered (pattern)
