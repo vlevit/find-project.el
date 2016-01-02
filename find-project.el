@@ -51,10 +51,12 @@
 ;; Function executed after project is selected can be customized by
 ;; setting `find-projects-default-action' variable (`dired' by default):
 ;;
-;;     ;; this requires `find-file-in-repository' package
+;;     (setq find-projects-default-action 'find-file)
+;;
+;;     ;; requires `find-file-in-repository' package
 ;;     (setq find-projects-default-action 'find-file-in-repository)
 ;;
-;;     ;; this requires `find-file-in-project' package
+;;     ;; requires `find-file-in-project' package
 ;;     (setq find-projects-default-action 'find-file-in-project)
 
 ;;; Code:
@@ -90,6 +92,8 @@
            (action (find-project-assoc-action selected-project)))
       (with-temp-buffer
         (cd selected-project)
-        (funcall action))))
+        (if (commandp action)
+            (call-interactively action)
+          (funcall action)))))
 
 (provide 'find-project)
