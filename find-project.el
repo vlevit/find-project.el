@@ -38,37 +38,48 @@
 ;;             "~/work/*/*"))
 ;;
 ;; Now if you call `M-x find-project' all matching projects will show
-;; up. After project is selected the default action will be executed
-;; in the project's root.
+;; up. After you choose the project `find-project-default-action' will
+;; be executed which is by default a list of pre-defined actions like
+;; magit or dired.
 ;;
-;; Patterns can also be property lists with such keys `:pattern',
-;; `:function', `:exclude' and `:action'. For example:
+;; You can customize default action by specifying a list of actions:
+;;
+;;     (setq find-project-default-action '(find-file-in-repository find-file))
+;;
+;; Or a single action:
+;;
+;;     (setq find-project-default-action 'magit-status)
+;;
+;; in which case it will be executed immediately.
+;;
+;; You can customize completion functions for projects and actions
+;; separately:
+;;
+;;     (setq find-project-completing-read-projects 'ivy-completing-read)
+;;     (setq find-project-completing-read-actions 'ido-completing-read)
+;;
+;; Examples of valid completing functions are `completing-read',
+;; `ido-completing-read', `helm-comp-read', `ivy-completing-read'.
+;;
+;; You can have more fine-grained control of where your projects are
+;; located and what actions to execute by using the property list in
+;; patterns:
 ;;
 ;;     (setq find-project-patterns
 ;;           '((:pattern "~/.emacs.d/site-lisp/*" :action find-file)
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
 ;;
-;; In patterns you can mix both wildcards and plists.
+;; Valid properties are `:pattern', `:function', `:exclude' and
+;; `:action'.
 ;;
-;; `:exclude' can also be a list of wildcards or a function accepting
-;; directory as argument.
+;; `function' can be used when wildcards are not sufficient to find
+;; your projects' locations.
 ;;
-;; Completion can be customized by specifying one of the completing
-;; function (`completing-read' by default):
+;; `:exclude' can be used for filtering out some directories. It can
+;; be a wildcard, list of wildcards or a function accepting directory
+;; as argument.
 ;;
-;;     (setq find-project-completing-read-projects 'ido-completing-read)
-;;     (setq find-project-completing-read-projects 'ivy-completing-read)
-;;
-;; Function executed after project is selected can be customized by
-;; setting `find-projects-default-action' variable (`dired' by default):
-;;
-;;     (setq find-projects-default-action 'find-file)
-;;
-;;     ;; requires `find-file-in-repository' package
-;;     (setq find-projects-default-action 'find-file-in-repository)
-;;
-;;     ;; requires `find-file-in-project' package
-;;     (setq find-projects-default-action 'find-file-in-project)
+;; In `find-project-patterns' you can mix both wildcards and plists.
 ;;
 ;; Global project filter can be provided via `find-project-exclude':
 ;;
@@ -77,7 +88,7 @@
 ;; `find-project-exclude' can accept the same types as `:exclude'.
 ;;
 ;; By default, recently selected projects are suggested first. You can
-;; disable this behavior as follows:
+;; disable this behavior by adding this line to your Emacs config:
 ;;
 ;;     (setq find-project-recent-first nil)
 
@@ -91,7 +102,8 @@
 
 (defvar find-project-completing-read-actions 'completing-read)
 
-(defvar find-project-default-action 'find-project-dired)
+(defvar find-project-default-action
+  '(magit-status find-file-in-repository find-file-in-project find-file find-project-dired))
 
 (defvar find-project-exclude nil)
 
