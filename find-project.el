@@ -28,8 +28,8 @@
 
 ;;; Commentary:
 
-;; Before using the package you must specify patterns to your
-;; project paths. For example:
+;; Before using the package you must specify patterns of your project
+;; paths. For example:
 ;;
 ;;     (setq find-project-patterns
 ;;           '("~/.emacs.d"
@@ -56,8 +56,8 @@
 ;; Completion can be customized by specifying one of the completing
 ;; function (`completing-read' by default):
 ;;
-;;     (setq find-project-completing-read-function 'ido-completing-read)
-;;     (setq find-project-completing-read-function 'ivy-completing-read)
+;;     (setq find-project-completing-read-projects 'ido-completing-read)
+;;     (setq find-project-completing-read-projects 'ivy-completing-read)
 ;;
 ;; Function executed after project is selected can be customized by
 ;; setting `find-projects-default-action' variable (`dired' by default):
@@ -87,7 +87,9 @@
 
 (defvar find-project-patterns nil)
 
-(defvar find-project-completing-read-function 'completing-read)
+(defvar find-project-completing-read-projects 'completing-read)
+
+(defvar find-project-completing-read-actions 'completing-read)
 
 (defvar find-project-default-action 'find-project-dired)
 
@@ -189,6 +191,19 @@ Filter against `find-project-exclude' value."
     (mapcar (lambda (dir) (cons dir action))
             (find-project--matched-dirs pattern))))
 
+(defun find-project--read-action (action-list)
+  (let* ((bound-actions
+          (cl-remove-if-not 'fboundp action-list))
+         (actions-alist
+          (mapcar (lambda (action)
+                    (cons (symbol-name action) action)) bound-actions))
+         (action-strings
+          (mapcar 'car actions-alist))
+         (selected-action
+          (funcall find-project-completing-read-actions
+                   "Run: " action-strings)))
+    (cdr (assoc selected-action actions-alist))))
+
 (defun find-project ()
   "Select a project from `find-project-patterns' and run action
 on it."
@@ -202,8 +217,12 @@ on it."
               (find-project--sort-recent directories)
             directories))
          (selected-directory
-          (funcall find-project-completing-read-function "Projects: " directories))
-         (action (cdr (assoc selected-directory projects))))
+          (funcall find-project-completing-read-projects "Projects: " directories))
+         (action (cdr (assoc selected-directory projects)))
+         (action
+          (if (listp action)
+              (find-project--read-action action)
+            action)))
     (with-temp-buffer
       (cd selected-directory)
       (if (commandp action)
