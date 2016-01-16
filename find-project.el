@@ -6,7 +6,7 @@
 ;; Maintainer: Vyacheslav Levit <dev@vlevit.org>
 ;; Version: 0.0.0
 ;; Created: 1 January 2016
-;; Keywords: projects
+;; Keywords: projects convenience
 ;; URL: http://github.com/vlevit/find-project.el
 
 ;; This file is NOT part of Emacs.
@@ -96,22 +96,48 @@
 
 (require 'cl-lib)
 
-(defvar find-project-patterns nil)
+(defgroup find-project nil
+  "Find project."
+  :group 'convenience)
 
-(defvar find-project-completing-read-projects 'completing-read)
+(defcustom find-project-patterns nil
+  "Patterns to your project paths.
+Either list of strings or list of plists. Each plist must contain
+either `:pattern' or `:function' key and optionally `:action' and
+`:exclude'.")
 
-(defvar find-project-completing-read-actions 'completing-read)
+(defcustom find-project-completing-read-projects 'completing-read
+  "Function which reads user input for choosing a project.
+Good options are `completing-read', `ido-completing-read',
+`helm-comp-read', `ivy-completing-read'."
+  :type 'function)
 
-(defvar find-project-default-action
-  '(magit-status find-file-in-repository find-file-in-project find-file find-project-dired))
+(defcustom find-project-completing-read-actions 'completing-read
+  "Function which reads user input for choosing an action.
+Good options are `completing-read', `ido-completing-read',
+`helm-comp-read', `ivy-completing-read'."
+  :type 'function)
 
-(defvar find-project-exclude nil)
+(defcustom find-project-default-action
+  '(magit-status find-file-in-repository find-file-in-project find-file find-project-dired)
+  "Default action executed for selected project.
+Must be a function which doesn't accept arguments or a list of
+such functions.")
+
+(defcustom find-project-exclude nil
+  "Global filter for projects.
+Must be a string (wildcard) or list of strings or a function
+accepting directory as argument.")
+
+(defcustom find-project-recent-first t
+  "Show recently selected projects on the top."
+  :type 'boolean)
+
+(defcustom find-project-save-file "~/.emacs.d/.find-project.el"
+  "File where to save data such as history of selected projects."
+  :type 'file)
 
 (defvar find-project-history nil)
-
-(defvar find-project-recent-first t)
-
-(defvar find-project-save-file "~/.emacs.d/.find-project.el")
 
 (defun find-project-dired ()
   (dired default-directory))
@@ -159,7 +185,7 @@
 
 (defun find-project--matched-dirs-unfiltered (pattern)
   "Return alist of directories matching the PATTERN.
-PATTERN can be either a wildcard string or a plist.
+PATTERN must be either a wildcard string or a plist.
 `find-project-exclude' is not considered."
   (cond ((stringp pattern)
          (find-project--expand pattern))
@@ -180,7 +206,7 @@ PATTERN can be either a wildcard string or a plist.
 
 (defun find-project--matched-dirs (pattern)
   "Return alist of directories matching the PATTERN.
-PATTERN can be either a wildcard string or a plist.
+PATTERN must be either a wildcard string or a plist.
 Filter against `find-project-exclude' value."
   (let ((matched-dirs (find-project--matched-dirs-unfiltered pattern)))
     (if find-project-exclude
