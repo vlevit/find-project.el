@@ -1,4 +1,4 @@
-;;; find-project.el --- find project
+;;; find-project.el --- easily finds your projects
 
 ;; Copyright (C) 2016 Vyacheslav Levit
 
