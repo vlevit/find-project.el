@@ -67,17 +67,19 @@
 ;;
 ;;     (setq find-project-patterns
 ;;           '((:pattern "~/.emacs.d/site-lisp/*" :action find-file)
+;;             (:function (find-project-traverse "~/projects/" 1 ".git") :action magit-status)
 ;;             (:pattern "~/work/*/*" :exclude "~/work/*hat/*")))
 ;;
 ;; Valid properties are `:pattern', `:function', `:exclude' and
 ;; `:action'.
 ;;
-;; `function' can be used when wildcards are not sufficient to find
-;; your projects' locations.
+;; `:function' can be used when wildcards are not sufficient to find
+;; your projects' locations. The value must be a function or a list
+;; whose car is a function and cdr are arguments.
 ;;
 ;; `:exclude' can be used for filtering out some directories. It can
 ;; be a wildcard, list of wildcards or a function accepting directory
-;; as argument.
+;; as an argument.
 ;;
 ;; In `find-project-patterns' you can mix both wildcards and plists.
 ;;
@@ -142,6 +144,28 @@ accepting directory as argument.")
 (defun find-project-dired ()
   (dired default-directory))
 
+(defun find-project-traverse (directory max-depth &rest filenames)
+  "Recursively traverse DIRECTORY up to level of MAX-DEPTH
+returning list of directories containing at least one file from
+FILENAMES. If MAX-DEPTH is nil it's considered that there is no
+depth limit."
+  (let ((max-depth (or max-depth -2)))
+    (when (/= max-depth -1)
+      (let* ((files (directory-files directory))
+             (directories
+              (cl-remove-if-not
+               '(lambda (dir)
+                  (and (file-directory-p (concat (file-name-as-directory directory) dir))
+                       (not (member dir (append '("." "..") filenames))))) files))
+             (matches (cl-remove-if-not
+                       '(lambda (file) (member file filenames)) files))
+             (matched-directory (if matches (list directory) nil))
+             (result matched-directory))
+        (dolist (dir directories result)
+          (let* ((fulldir (concat (file-name-as-directory directory) dir))
+                 (subdirs (apply 'find-project-traverse fulldir (- max-depth 1) filenames)))
+            (setq result (append result subdirs))))))))
+
 (defun find-project-dump-list (symbol)
   (let ((value (symbol-value symbol)))
     (insert (format "(setq %S" symbol))
@@ -197,7 +221,9 @@ PATTERN must be either a wildcard string or a plist.
                   (if pattern
                       (find-project--expand pattern)
                     (if function
-                        (funcall function)
+                        (if (functionp function)
+                            (funcall function)
+                          (apply (car function) (cdr function)))
                       (error ":pattern or :function must be specified")))))
              (if exclude (find-project--exclude dirs exclude)
                dirs))))
